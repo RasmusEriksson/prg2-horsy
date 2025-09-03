@@ -3,6 +3,7 @@ import random
 from random import randint
 import math
 from time import sleep
+import os
 
 game = True
 
@@ -35,16 +36,20 @@ horse_names = [
     "Lalaboola",
     "Triceratops",
     "7",
-    "Horse5.png"
+    "Horse5.png",
+    "uhmm uhhhh.... uh... uhmmm",
+    "joe"
 ]
 
 
+def printF(msg,end="\n"):
+    print(msg,end = end,flush=True)
 
 def print_copies(string,copies,new_line = True):
     for i in range(0, copies):
-        print(string,end="")
+        printF(string,end="")
     if new_line:
-        print("")
+        printF("")
 
 
 def clamp(n,lowest,highest):
@@ -73,7 +78,6 @@ class horse:
         final_move = self.speed * multiplier
         self.spaces_moved += final_move
 
-
 def generate_new_horse():
     max_stat = max_stat_total -1
     
@@ -93,10 +97,11 @@ def generate_new_horse():
 
 
 def render_race_frame(msg):
+    os.system("clear")
 
-    print("\n\n\n\n\n")
+    printF("\n\n\n\n\n")
 
-    print(msg)
+    printF(msg)
 
     print_copies("=",visual_length)
 
@@ -107,10 +112,10 @@ def render_race_frame(msg):
 
         spaces_left = visual_length - (spaces_traveled+1)
 
-        print(horse.name,":",horse.spaces_moved)
+        printF(str(horse.name) +":"+ str(horse.spaces_moved))
         print_copies(".",spaces_left,False)
         print_copies("🐎",1,False)
-        print_copies(":",spaces_traveled,True)
+        print_copies("+",spaces_traveled,True)
 
 
 
@@ -146,9 +151,9 @@ while game:
         game = False
         
 
-        print_copies("🎉-",int(visual_length/2))
-        print(f"{winning_horse.name.upper()} HAS WON!!!!!! WOOOOOOOOO!!!!!!")
-        print_copies("🎉-",int(visual_length/2))
+        print_copies("🎉--",int(visual_length/3))
+        printF(f"{winning_horse.name.upper()} HAS WON!!!!!! WOOOOOOOOO!!!!!!")
+        print_copies("🎉--",int(visual_length/3))
     
     sleep(1)
 
