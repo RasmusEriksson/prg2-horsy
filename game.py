@@ -14,6 +14,14 @@ max_stat_total = 8
 track_length = 100
 visual_length = 50
 
+money = 500
+horse_option = 1
+bet_option = 1
+
+selected_horse = NotImplemented
+bet_value = NotImplemented
+
+
 
 horses = []
 
@@ -51,9 +59,14 @@ def print_copies(string,copies,new_line = True):
     if new_line:
         printF("")
 
+def print_middle(msg,char,end="\n"):
+    pos_offset = int((char - len(msg))/2)
+    print_copies(" ",pos_offset,False)
+    printF(msg,end)
 
 def clamp(n,lowest,highest):
     return max(lowest,min(n,highest))
+    
 
 
 class horse:
@@ -95,11 +108,75 @@ def generate_new_horse():
 
     return new_horse
 
+def clear_frame():
+    os.system("clear")
+    printF("\n\n\n\n\n")
+
+def render_beting_frame(msg,controls,stage) -> bool:
+    clear_frame()
+    global horse_option
+    global bet_option
+
+    global selected_horse
+    global bet_value
+
+    current_option = 0
+    selected = NotImplemented
+    
+    characters = 0
+    names_visual = ""
+
+    for horse in horses:
+        current_option += 1
+
+        name = horse.name + "🐎"
+
+        if current_option == horse_option:
+            name = "[ " + name + " ]"
+            selected = horse
+            selected_horse = horse
+        
+        name += "   "
+        characters += len(name)
+
+        names_visual += name
+    
+    print_copies("=",characters)
+    print_middle("dallars:" + str(money),characters)
+    print_copies("=",characters)
+    print_middle(msg,characters)
+    print_copies("-",characters)
+
+    printF(names_visual)
+
+    printF("")
+
+    stats = "Speed: " + str(selected.speed) + "   Agility: " + str(selected.agility) + "\n\n"
+    
+    print_middle(stats,characters)
+
+    print_copies("-",characters)
+    print_middle(controls,characters)
+    print_copies("-",characters)
+
+    print_copies("=",characters)
+    
+    choice = input("Input?:  ").upper()
+    continue_val = False
+
+    if choice == "A":
+        horse_option = clamp(horse_option-1 , 1, len(horses))
+    elif choice == "D":
+        horse_option = clamp(horse_option+1 , 1, len(horses))
+    elif choice == "":
+        continue_val = True
+
+    
+    return continue_val
+
 
 def render_race_frame(msg):
-    os.system("clear")
-
-    printF("\n\n\n\n\n")
+    clear_frame()
 
     printF(msg)
 
@@ -125,10 +202,21 @@ def render_race_frame(msg):
     print_copies("=",visual_length)
  
 
+
 for i in range(0,horse_amount):
     new_horse = generate_new_horse()
     horses.append(new_horse)
     print(new_horse.name,new_horse.speed,new_horse.agility)
+
+continue_val = False
+"""
+while not continue_val:
+    continue_val = render_beting_frame("pick your horse!","Input: (A) <--,(D) -->, (ENTER) pick",1)
+
+while not continue_val:
+    continue_val = render_beting_frame("pick your horse!","Input: (A) <--,(D) -->, (ENTER) pick",1)
+"""
+
 
 render_race_frame("Ready???")
 sleep(3)
@@ -156,7 +244,6 @@ while game:
         print_copies("🎉--",int(visual_length/3))
     
     sleep(1)
-
 
 
 
