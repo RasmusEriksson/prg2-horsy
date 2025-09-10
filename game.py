@@ -5,10 +5,12 @@ import math
 from time import sleep
 import os
 
+
 game = True
+racing = True
 
 
-horse_amount = 6
+horse_amount = 5
 max_stat_total = 8
 
 track_length = 100
@@ -24,7 +26,9 @@ bet_value = NotImplemented
 
 
 horses = []
+betting_options = [0.25,0.5,0.75,0.9]
 
+horse_visuals = ["🏇","🎠","🐎","🐴 ","🫎 ","🦕 ","🐈 ","🥸 "]
 horse_names = [
     "Horse Meat",
     "Brochowski",
@@ -79,6 +83,8 @@ class horse:
 
         self.spaces_moved = 0
 
+        self.visual = random.choice(horse_visuals)
+
     def gallop(self):
         roll = randint(1,6)
         agility_roll = randint(1,self.agility) + 2
@@ -104,9 +110,8 @@ def generate_new_horse():
 
     new_horse = horse(horse_name,speed,agility)
 
-    
-
     return new_horse
+
 
 def clear_frame():
     os.system("clear")
@@ -122,14 +127,16 @@ def render_beting_frame(msg,controls,stage) -> bool:
 
     current_option = 0
     selected = NotImplemented
+    selected_bet = NotImplemented
     
     characters = 0
     names_visual = ""
 
+    #Creates the visuals to be printed out for what horses there are and which are picked
     for horse in horses:
         current_option += 1
 
-        name = horse.name + "🐎"
+        name = horse.name + horse.visual
 
         if current_option == horse_option:
             name = "[ " + name + " ]"
@@ -141,8 +148,26 @@ def render_beting_frame(msg,controls,stage) -> bool:
 
         names_visual += name
     
+    #Creates the visuals to be printed out for which betting option is currently picked
+    current_option = 0
+    bet_visuals = ""
+
+    for bet in betting_options:
+        current_option += 1
+
+        betval = str(int(bet*100)) + "% (" + str(int(money*bet)) + "$)"
+
+        if current_option == bet_option:
+            betval = "{* " + betval + " *}"
+            bet_value = bet
+        
+        betval += "   "
+
+        bet_visuals += betval
+
+
     print_copies("=",characters)
-    print_middle("dallars:" + str(money),characters)
+    print_middle("dallars:" + str(money) + "$",characters)
     print_copies("=",characters)
     print_middle(msg,characters)
     print_copies("-",characters)
@@ -156,6 +181,8 @@ def render_beting_frame(msg,controls,stage) -> bool:
     print_middle(stats,characters)
 
     print_copies("-",characters)
+    printF(bet_visuals)
+    print_copies("-",characters)
     print_middle(controls,characters)
     print_copies("-",characters)
 
@@ -164,16 +191,23 @@ def render_beting_frame(msg,controls,stage) -> bool:
     choice = input("Input?:  ").upper()
     continue_val = False
 
-    if choice == "A":
-        horse_option = clamp(horse_option-1 , 1, len(horses))
-    elif choice == "D":
-        horse_option = clamp(horse_option+1 , 1, len(horses))
-    elif choice == "":
-        continue_val = True
+    if stage == 1:
+        if choice == "A":
+            horse_option = clamp(horse_option-1 , 1, len(horses))
+        elif choice == "D":
+            horse_option = clamp(horse_option+1 , 1, len(horses))
+        elif choice == "":
+            continue_val = True
+    elif stage == 2:
+        if choice == "A":
+            bet_option = clamp(bet_option-1 , 1, len(betting_options))
+        elif choice == "D":
+            bet_option = clamp(bet_option+1 , 1, len(betting_options))
+        elif choice == "":
+            continue_val = True
 
     
     return continue_val
-
 
 def render_race_frame(msg):
     clear_frame()
@@ -191,7 +225,7 @@ def render_race_frame(msg):
 
         printF(str(horse.name) +":"+ str(horse.spaces_moved))
         print_copies(".",spaces_left,False)
-        print_copies("🐎",1,False)
+        print_copies(horse.visual,1,False)
         print_copies("+",spaces_traveled,True)
 
 
@@ -201,49 +235,76 @@ def render_race_frame(msg):
     
     print_copies("=",visual_length)
  
+def render_win_frame(winning_horse):
+    clear_frame()
+
+    previous_money = money
+    new_money = previous_money
+
+    print_copies("=",visual_length)
+    print_copies("🎉--",int(visual_length/3))
+    printF("")
+    print_middle(f"{winning_horse.name.upper()} HAS WON!!!!!! WOOOOOOOOO!!!!!!",visual_length)
+    print_middle("0===========0",visual_length)
+    printF("")
+    print_copies("🎉--",int(visual_length/3))
+    print_copies("=",visual_length)
+
+    printF("")
+    
+    if winning_horse == selected_horse:
+        new_money += int(bet_value * money)
+        print_middle("(+) your horse won!!!!!! (+)",visual_length)
+    else:
+        new_money -= int(bet_value * money)
+        print_middle("(-) your horse lost...... (-)",visual_length)
+
+    print_middle(str(previous_money) + "$  --->  " + str(new_money) + "$",visual_length)
+
+    printF("")
+
+    print_copies("=",visual_length)
+    next_round = input("input anything to continue: ")
+    return new_money
 
 
-for i in range(0,horse_amount):
-    new_horse = generate_new_horse()
-    horses.append(new_horse)
-    print(new_horse.name,new_horse.speed,new_horse.agility)
-
-continue_val = False
-"""
-while not continue_val:
-    continue_val = render_beting_frame("pick your horse!","Input: (A) <--,(D) -->, (ENTER) pick",1)
-
-while not continue_val:
-    continue_val = render_beting_frame("pick your horse!","Input: (A) <--,(D) -->, (ENTER) pick",1)
-"""
-
-
-render_race_frame("Ready???")
-sleep(3)
 
 while game:
-    
-    
-    winning_horse = False
-    winning_value = track_length -1
 
-    for horsey in horses:
-        horsey.gallop()
-        if horsey.spaces_moved > winning_value:
-            winning_horse = horsey
-            winning_value = horsey.spaces_moved
+    horses = []
 
-    render_race_frame("RACE!!!")
+    for i in range(0,horse_amount):
+        new_horse = generate_new_horse()
+        horses.append(new_horse)
 
-    if winning_horse:
-        game = False
+    continue_val = False
+    while not continue_val:
+        continue_val = render_beting_frame("🐴 pick your horse! 🐴","Input: (A) <--,(D) -->, (ENTER) pick",1)
+    continue_val = False
+    while not continue_val:
+        continue_val = render_beting_frame("💸 pick how much you wanna bet! 💸","Input: (A) <--,(D) -->, (ENTER) pick",2)
+
+    racing = True
+
+    render_race_frame("Ready???")
+    sleep(3)
+
+    while racing:
         
+        
+        winning_horse = False
+        winning_value = track_length -1
 
-        print_copies("🎉--",int(visual_length/3))
-        printF(f"{winning_horse.name.upper()} HAS WON!!!!!! WOOOOOOOOO!!!!!!")
-        print_copies("🎉--",int(visual_length/3))
-    
-    sleep(1)
+        for horsey in horses:
+            horsey.gallop()
+            if horsey.spaces_moved > winning_value:
+                winning_horse = horsey
+                winning_value = horsey.spaces_moved
 
+        render_race_frame("RACE!!!")
 
-
+        if winning_horse:
+            racing = False
+            money = render_win_frame(winning_horse)
+            
+        sleep(0.5)
