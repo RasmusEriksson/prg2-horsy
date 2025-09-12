@@ -20,13 +20,15 @@ money = 500
 horse_option = 1
 bet_option = 1
 
-selected_horse = NotImplemented
-bet_value = NotImplemented
-
-
 
 horses = []
 betting_options = [0.25,0.5,0.75,0.9]
+
+selected_horse = NotImplemented
+bet_value = betting_options[0]
+
+
+
 
 horse_visuals = ["🏇","🎠","🐎","🐴 ","🫎 ","🦕 ","🐈 ","🥸 "]
 horse_names = [
@@ -97,6 +99,9 @@ class horse:
         final_move = self.speed * multiplier
         self.spaces_moved += final_move
 
+def bet_val_to_str(val) -> str:
+    return str(int(val*100)) + "% (" + str(int(money*val)) + "$)"
+
 def generate_new_horse():
     max_stat = max_stat_total -1
     
@@ -111,7 +116,6 @@ def generate_new_horse():
     new_horse = horse(horse_name,speed,agility)
 
     return new_horse
-
 
 def clear_frame():
     os.system("clear")
@@ -139,7 +143,7 @@ def render_beting_frame(msg,controls,stage) -> bool:
         name = horse.name + horse.visual
 
         if current_option == horse_option:
-            name = "[ " + name + " ]"
+            name = "[⭐ " + name + " ⭐]"
             selected = horse
             selected_horse = horse
         
@@ -155,16 +159,19 @@ def render_beting_frame(msg,controls,stage) -> bool:
     for bet in betting_options:
         current_option += 1
 
-        betval = str(int(bet*100)) + "% (" + str(int(money*bet)) + "$)"
+        betval = bet_val_to_str(bet)
 
         if current_option == bet_option:
-            betval = "{* " + betval + " *}"
+            betval = "{💰 " + betval + " 💰}"
             bet_value = bet
+
+        
         
         betval += "   "
 
         bet_visuals += betval
 
+    selected_display = "[[[ " + selected_horse.name + " " + selected_horse.visual + "  |  💸 Bet: " + bet_val_to_str(bet_value) + "]]]"
 
     print_copies("=",characters)
     print_middle("dallars:" + str(money) + "$",characters)
@@ -172,8 +179,15 @@ def render_beting_frame(msg,controls,stage) -> bool:
     print_middle(msg,characters)
     print_copies("-",characters)
 
+    if stage ==1:
+        printF("")
     printF(names_visual)
+    if stage ==1:
+        printF("")
 
+    print_copies("-",characters)
+    printF("")
+    print_middle(selected_display, characters)
     printF("")
 
     stats = "Speed: " + str(selected.speed) + "   Agility: " + str(selected.agility) + "\n\n"
@@ -181,8 +195,15 @@ def render_beting_frame(msg,controls,stage) -> bool:
     print_middle(stats,characters)
 
     print_copies("-",characters)
+
+    if stage ==2:
+        printF("")
     printF(bet_visuals)
+    if stage ==2:
+        printF("")
+
     print_copies("-",characters)
+    print_middle("controls",characters)
     print_middle(controls,characters)
     print_copies("-",characters)
 
@@ -214,6 +235,10 @@ def render_race_frame(msg):
 
     printF(msg)
 
+    your_horse = "you've bet: " + bet_val_to_str(bet_value) + " on "  + selected_horse.name + " " + selected_horse.visual
+
+    print_copies("=",visual_length)
+    print_middle(your_horse,visual_length)
     print_copies("=",visual_length)
 
     for horse in horses:
@@ -223,7 +248,11 @@ def render_race_frame(msg):
 
         spaces_left = visual_length - (spaces_traveled+1)
 
-        printF(str(horse.name) +":"+ str(horse.spaces_moved))
+        horse_name = str(horse.name) +":"+ str(horse.spaces_moved)
+        if horse == selected_horse:
+            horse_name += " <---- your horse"
+
+        printF(horse_name)
         print_copies(".",spaces_left,False)
         print_copies(horse.visual,1,False)
         print_copies("+",spaces_traveled,True)
@@ -308,3 +337,5 @@ while game:
             money = render_win_frame(winning_horse)
             
         sleep(0.5)
+    bet_option = 1
+    horse_option = 1
