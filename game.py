@@ -34,7 +34,7 @@ def clamp(n, lowest, highest):
 
 
 class horse:
-    def __init__(self, speed, agility) -> None:
+    def __init__(self) -> None:
         self.horse_visuals = ["🏇","🎠","🐎","🐴 ","🫎 ","🦕 ","🐈 ","🥸 "]
         self.horse_names = [
             "Horse Meat",
@@ -60,10 +60,11 @@ class horse:
             "joe"
         ]
         
-        self.speed = speed
-        self.agility = agility
+        self.speed = 1
+        self.agility = 1
 
         self.spaces_moved = 0
+        self.money_multiplier = 1
 
         self.name = random.choice(self.horse_names)
         self.visual = random.choice(self.horse_visuals)
@@ -79,6 +80,14 @@ class horse:
             
         final_move = self.speed * multiplier
         self.spaces_moved += final_move
+    
+    def set_values(self,speed,agility):
+        stat_difference = clamp(abs(speed - agility) - 2, 0, math.inf)
+        stat_from_max = max_stat_total - (speed + agility)
+
+        self.money_multiplier = 1 + (stat_from_max * 0.25) + (stat_difference * 0.15)
+        self.speed = speed
+        self.agility = agility
 
 class game_logic:
     def __init__(self, horse_amount, track_length):
@@ -103,7 +112,8 @@ class game_logic:
         max_agility = max_stat_total - speed
         agility = randint(1, max_agility)
 
-        new_horse = horse(speed,agility)
+        new_horse = horse()
+        new_horse.set_values(speed,agility)
 
         return new_horse
     
@@ -112,7 +122,15 @@ class game_logic:
         for _ in range(0,self.horse_amount):
             new_horse = self._generate_new_horse()
             self.horses.append(new_horse)
-        
+    
+    def reroll(self) -> str:
+        if self.money >= 100:
+            self.money -= math.floor(self.money * 0.05)
+            self.generate_horses()
+            return None
+        else:
+            return "YOU ARE TOO POOR TO REROLL!"
+
 class game(game_logic):
     def __init__(self, horse_amount, track_length, visual_length):
         game_logic.__init__(self, horse_amount, track_length)
@@ -130,7 +148,7 @@ class game(game_logic):
         os.system("clear")
         printF("\n\n\n\n\n")
 
-    def render_beting_frame(self, msg, controls, stage) -> bool:
+    def render_betting_frame(self, msg, controls, stage, error = None) -> bool:
         self._clear_frame()
 
         #Establishing variables
@@ -164,11 +182,11 @@ class game(game_logic):
 
             if current_option == self.bet_option:
                 betval = "{💰 " + betval + " 💰}"
-                bet_value = bet
+                self.bet_value = bet
             betval += "   "
             bet_visuals += betval
 
-        selected_display = "[[[ " + self.selected_horse.name + " " + self.selected_horse.visual + "  |  💸 Bet: " + self._bet_val_to_str(bet_value) + "]]]"
+        selected_display = "[[[ " + self.selected_horse.name + " " + self.selected_horse.visual + "  |  💸 Bet: " + self._bet_val_to_str(self.bet_value) + "]]]"
 
         print_copies("=",characters)
         print_middle("dallars:" + str(self.money) + "$",characters)
@@ -187,7 +205,7 @@ class game(game_logic):
         print_middle(selected_display, characters)
         printF("")
 
-        stats = "Speed: " + str(self.selected_horse.speed) + "   Agility: " + str(self.selected_horse.agility) + "\n\n"
+        stats = "Speed: " + str(self.selected_horse.speed) + "   Agility: " + str(self.selected_horse.agility) + "   Cash Multiplier: " + str(self.selected_horse.money_multiplier) + "\n\n"
         
         print_middle(stats,characters)
 
@@ -199,15 +217,24 @@ class game(game_logic):
         if stage ==2:
             printF("")
 
+        return self.bet_input(stage, controls, characters, error)
+
+    def bet_input(self, stage, controls, characters, error) -> bool:
         print_copies("-",characters)
         print_middle("controls",characters)
         print_middle(controls,characters)
+        if error:
+            print_middle(error,characters)
         print_copies("-",characters)
 
         print_copies("=",characters)
         
         choice = input("Input?:  ").upper()
         continue_val = False
+        error = None
+
+        if choice == "R":
+            error = self.reroll()
 
         if stage == 1:
             if choice == "A":
@@ -223,9 +250,11 @@ class game(game_logic):
                 self.bet_option = clamp(self.bet_option+1 , 1, len(self.betting_options))
             elif choice == "":
                 continue_val = True
-
         
-        return continue_val
+        return [continue_val, error]
+
+
+
 
     def render_race_frame(self, msg):
         self._clear_frame()
@@ -291,14 +320,21 @@ class game(game_logic):
     def run_round(self):
         self.generate_horses()
 
+        error = None
+        action_controls = "Input: (A) <--  (D) -->  (R) reroll {" + self._bet_val_to_str(0.05) + "}  (ENTER) pick"
+
         #Continue on rendering the betting frame till players have made their choice of horse
         continue_val = False
         while not continue_val:
-            continue_val = self.render_beting_frame("🐴 pick your horse! 🐴","Input: (A) <--,(D) -->, (ENTER) pick",1)
+            continue_values = self.render_betting_frame("🐴 pick your horse! 🐴", action_controls, 1, error)
+            continue_val = continue_values[0]
+            error = continue_values[1]
         #Continue on rendering the betting frame till players have made their choice of how much they wanna bet
         continue_val = False
         while not continue_val:
-            continue_val = self.render_beting_frame("💸 pick how much you wanna bet! 💸","Input: (A) <--,(D) -->, (ENTER) pick",2)
+            continue_values = self.render_betting_frame("💸 pick how much you wanna bet! 💸", action_controls, 2, error)
+            continue_val = continue_values[0]
+            error = continue_values[1]
 
         #Small introduction to showcase the board and "build tenstion"
         racing = True
