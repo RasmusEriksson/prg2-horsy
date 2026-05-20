@@ -53,42 +53,48 @@ class StoreFront:
     def get_new_items(self):
         self.items = []
         for _ in range(self._item_amount):
-            random_index = randint(1,self._item_amount) -1
+            random_index = randint(1,len(self._potential_items)) -1
             new_item = self._potential_items[random_index]
             self.items.append(new_item)
     
-    def store_input(self, characters):
+    def store_input(self, characters, error):
         print_copies("-",characters)
         print_middle("controls",characters)
-        print_middle("Input: (A) <--  (D) --> (S) Go Back (ENTER) buy selected item",characters)
+        print_middle("Input: (A) <--  (D) --> (X) Go Back  (ENTER) buy selected item",characters)
         if error:
+            print("THIS IS THE ERROR:  ", error)
             print_middle(error,characters)
         print_copies("-",characters)
 
         print_copies("=",characters)
         
         choice = input("Input?:  ").upper()
-        continue_val = False
         error = None
 
-        if choice == "S":
+        if choice == "X":
             self.game.on_store = False
         else:
             if choice == "A":
-                self.store_pick = clamp(self.store_pick-1 , 1, len(self.betting_options))
+                self.store_pick = clamp(self.store_pick-1 , 0, len(self.items) -1)
             elif choice == "D":
-                self.store_pick = clamp(self.store_pick+1 , 1, len(self.betting_options))
+                self.store_pick = clamp(self.store_pick+1 , 0, len(self.items) -1)
             elif choice == "":
-                stage = 2
+                selected_item = self.items[self.store_pick]
+                buy_values = selected_item.buy(self.game.money, self.game.selected_horse)
+                game.money = buy_values[0]
+                error = buy_values[1]
+                if not error:
+                    self.game.on_store = False
         
-        return [continue_val, error, stage]
+        return error
 
-    def print_storefront(self, msg):
+    def print_storefront(self, msg, stage, error):
         game._clear_frame()
 
         characters = 0
         inbetween = "|   |"
 
+        selected_item = self.items[self.store_pick-1]
         item_characters_dict = {}
         
         for item in self.items:
@@ -111,10 +117,15 @@ class StoreFront:
             print_middle(item.name, item_characters,"", True)
         printF(inbetween)
 
-        for item in self.items:
+        for i in range(len(self.items)):
             printF(inbetween,"")
+            item = self.items[i]
             item_characters = item_characters_dict[item]
-            print_middle(item.visual, item_characters -1,"", True)
+            if i == self.store_pick :
+                item_characters -= 2
+                print_middle("{🟡 "+item.visual+" 🟡}", item_characters-1,"", True)
+            else:
+                print_middle(item.visual, item_characters -1,"", True)
         printF(inbetween)
 
         for item in self.items:
@@ -153,7 +164,7 @@ class StoreFront:
         printF(inbetween)
 
         print_copies("-",characters)
-        test = input("wait a bit ")
+        return [False, self.store_input(characters, error), stage ]
 
             
 
@@ -169,7 +180,7 @@ class Item:
             money -= self.cost
             self._buff(selected_horse)
         else:
-            error = "YOU ARE TOO POOR TO BUY THIS ITEM!"
+            error = str(self.cost) +"YOU ARE TOO POOR TO BUY THIS ITEM!" + str(money) 
         return [money, error]
     
     def _buff(self, selected_horse):
@@ -262,7 +273,7 @@ class Horse_handler:
         self.betting_options = [0.25,0.5,0.75,0.9]
         self.bet_value = self.betting_options[0]
 
-        self.money = 500
+        self.money = 1500
         self.horses = []
         self.selected_horse = None
 
@@ -306,7 +317,7 @@ class Game(Horse_handler):
         
         self.track_length = track_length
         self.visual_length = visual_length
-        self.store = StoreFront(self,3)  
+        self.store: StoreFront = StoreFront(self,3)  
         self.on_store = False
         
 
@@ -320,8 +331,7 @@ class Game(Horse_handler):
 
     def render_betting_frame(self, msg, controls, stage, error = None) -> bool:
         if self.on_store:
-            self.store.print_storefront()
-            pass
+            return self.store.print_storefront("BUY ITEM FOR YOUR SELECTED HORSE!: " + self.selected_horse.visual + " " + self.selected_horse.name,stage,error)
         self._clear_frame()
 
         #Establishing variables
@@ -409,7 +419,7 @@ class Game(Horse_handler):
         if choice == "R":
             error = self.reroll()
             stage = 1
-        elif choice == "X":
+        elif choice == "S":
             self.on_store = True
         else:
             if stage == 1:
@@ -424,7 +434,8 @@ class Game(Horse_handler):
                     self.bet_option = clamp(self.bet_option-1 , 1, len(self.betting_options))
                 elif choice == "D":
                     self.bet_option = clamp(self.bet_option+1 , 1, len(self.betting_options))
-                elif choice == "S":
+                
+                elif choice == "X":
                     stage = 1
                 elif choice == "":
                     continue_val = True
@@ -511,9 +522,9 @@ class Game(Horse_handler):
                 action = "🐴 pick your horse! 🐴"
             elif stage == 2:
                 action = "💸 pick how much you wanna bet! 💸"
-                goback = "  (S) Go Back"
+                goback = "  (X) Go Back"
             
-            action_controls = "Input: (A) <--  (D) -->" + goback +  "  (R) reroll {" + self._bet_val_to_str(0.05) + "}  (ENTER) pick"
+            action_controls = "Input: (A) <--  (D) --> " + goback +  "   (S) Shop  (R) reroll {" + self._bet_val_to_str(0.05) + "}  (ENTER) pick"
         
             continue_values = self.render_betting_frame(action, action_controls, stage, error)
             continue_val = continue_values[0]
