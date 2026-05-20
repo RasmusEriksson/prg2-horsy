@@ -23,16 +23,20 @@ def print_copies(string, copies, new_line = True):
     if new_line:
         printF("")
 
-def print_middle(msg, char, end="\n"):
+def print_middle(msg, char, end="\n", leftover: bool = False):
     pos_offset = int((char - len(msg))/2)
     print_copies(" ",pos_offset,False)
     printF(msg,end)
+    if leftover:
+        leftovers = char - (pos_offset + len(msg))
+        print_copies(" ",leftovers,False)
 
 def clamp(n, lowest, highest):
     return max(lowest,min(n,highest))
     
 class StoreFront:
-    def __init__(self, item_amount):
+    def __init__(self, game, item_amount):
+        self.game = game
         self._item_amount = item_amount
         self._items = []
         self._potential_items = [
@@ -44,6 +48,7 @@ class StoreFront:
             Advertisement("Big Spender","😎",2500,1000,3),
             Advertisement("Illegal Bet","🕵️",500,2000,1.5)
         ]
+        self.store_pick = 0
     
     def get_new_items(self):
         self.items = []
@@ -52,6 +57,105 @@ class StoreFront:
             new_item = self._potential_items[random_index]
             self.items.append(new_item)
     
+    def store_input(self, characters):
+        print_copies("-",characters)
+        print_middle("controls",characters)
+        print_middle("Input: (A) <--  (D) --> (S) Go Back (ENTER) buy selected item",characters)
+        if error:
+            print_middle(error,characters)
+        print_copies("-",characters)
+
+        print_copies("=",characters)
+        
+        choice = input("Input?:  ").upper()
+        continue_val = False
+        error = None
+
+        if choice == "S":
+            self.game.on_store = False
+        else:
+            if choice == "A":
+                self.store_pick = clamp(self.store_pick-1 , 1, len(self.betting_options))
+            elif choice == "D":
+                self.store_pick = clamp(self.store_pick+1 , 1, len(self.betting_options))
+            elif choice == "":
+                stage = 2
+        
+        return [continue_val, error, stage]
+
+    def print_storefront(self, msg):
+        game._clear_frame()
+
+        characters = 0
+        inbetween = "|   |"
+
+        item_characters_dict = {}
+        
+        for item in self.items:
+            item_characters = clamp(len(item.name), 20, math.inf)
+            item_characters_dict[item] = item_characters
+            characters += item_characters + len(inbetween)
+        
+        print_copies("=",characters)
+        print_middle("dallars:" + str(game.money) + "$",characters)
+        print_copies("=",characters)
+        print_middle(msg,characters)
+        print_copies("-",characters)
+
+        
+        
+
+        for item in self.items:
+            printF(inbetween,"")
+            item_characters = item_characters_dict[item]
+            print_middle(item.name, item_characters,"", True)
+        printF(inbetween)
+
+        for item in self.items:
+            printF(inbetween,"")
+            item_characters = item_characters_dict[item]
+            print_middle(item.visual, item_characters -1,"", True)
+        printF(inbetween)
+
+        for item in self.items:
+            printF(inbetween,"")
+            item_characters = item_characters_dict[item]
+            if type(item) == Roid:
+                if item.speed_buff != 0:
+                    print_middle("Speed: "+str(item.speed_buff), item_characters , "",True)
+                else:
+                    print_middle(" ", item_characters , "",True)
+            elif type(item) == Advertisement:
+                if item.cash_buff != 0:
+                    print_middle("Extra cash: "+str(item.cash_buff), item_characters , "",True)
+                else:
+                    print_middle(" ", item_characters , "",True)
+        printF(inbetween)
+
+        for item in self.items:
+            printF(inbetween,"")
+            item_characters = item_characters_dict[item]
+            if type(item) == Roid:
+                if item.agility_buff != 0:
+                    print_middle("Agility: "+str(item.agility_buff), item_characters , "",True)
+                else:
+                    print_middle(" ", item_characters , "",True)
+            elif type(item) == Advertisement:
+                if item.money_multiplier != 0:
+                    print_middle("Money Mult: "+str(item.money_multiplier), item_characters , "",True)
+                else:
+                    print_middle(" ", item_characters , "",True)
+        printF(inbetween)
+
+        for item in self.items:
+            printF(inbetween,"")
+            print_middle("Cost: "+str(item.cost), item_characters_dict[item],"",True)
+        printF(inbetween)
+
+        print_copies("-",characters)
+        test = input("wait a bit ")
+
+            
 
 class Item:
     def __init__(self, name, visual, cost):
@@ -74,23 +178,23 @@ class Item:
 class Roid(Item):
     def __init__(self, name, visual, cost, agility_buff, speed_buff):
         super().__init__(name,visual,cost)
-        self._agility_buff = agility_buff
-        self._speed_buff = speed_buff
+        self.agility_buff = agility_buff
+        self.speed_buff = speed_buff
         
     
     def _buff(self, selected_horse):
-        selected_horse.speed += self._speed_buff
-        selected_horse.agility += self._agility_buff
+        selected_horse.speed += self.speed_buff
+        selected_horse.agility += self.agility_buff
 
 class Advertisement(Item):
     def __init__(self, name, visual, cost, cash_buff, money_multiplier = 1):
         super().__init__(name,visual,cost)
-        self._cash_buff = cash_buff
-        self._money_multiplier = money_multiplier
+        self.cash_buff = cash_buff
+        self.money_multiplier = money_multiplier
 
     def _buff(self, selected_horse):
-        selected_horse.cash_gain += self._cash_buff
-        selected_horse.money_multiplier += self._cash_multiplier
+        selected_horse.cash_gain += self.cash_buff
+        selected_horse.money_multiplier += self.cash_multiplier
 
 
 
@@ -176,7 +280,7 @@ class Horse_handler:
         max_agility = max_stat_total - speed
         agility = randint(1, max_agility)
 
-        new_horse = horse()
+        new_horse = Horse()
         new_horse.set_values(speed,agility)
 
         return new_horse
@@ -201,7 +305,9 @@ class Game(Horse_handler):
         super().__init__(horse_amount)
         
         self.track_length = track_length
-        self.visual_length = visual_length  
+        self.visual_length = visual_length
+        self.store = StoreFront(self,3)  
+        self.on_store = False
         
 
     def _bet_val_to_str(self, val) -> str:
@@ -213,6 +319,9 @@ class Game(Horse_handler):
 
 
     def render_betting_frame(self, msg, controls, stage, error = None) -> bool:
+        if self.on_store:
+            self.store.print_storefront()
+            pass
         self._clear_frame()
 
         #Establishing variables
@@ -300,6 +409,8 @@ class Game(Horse_handler):
         if choice == "R":
             error = self.reroll()
             stage = 1
+        elif choice == "X":
+            self.on_store = True
         else:
             if stage == 1:
                 if choice == "A":
@@ -384,7 +495,7 @@ class Game(Horse_handler):
 
     def run_round(self):
         self.generate_horses()
-
+        self.store.get_new_items()
 
         error = None
         
